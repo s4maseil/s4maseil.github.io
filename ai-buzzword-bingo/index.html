@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI Buzzword Bingo 🎯 – Live-Vortrag Edition</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :root {
+    --bg1: #0f0c29;
+    --bg2: #302b63;
+    --bg3: #24243e;
+    --accent: #ff2e88;
+    --accent2: #00e5ff;
+    --accent3: #ffd700;
+    --cell-bg: rgba(255, 255, 255, 0.08);
+    --cell-border: rgba(255, 255, 255, 0.15);
+  }
+
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(160deg, var(--bg1) 0%, var(--bg2) 50%, var(--bg3) 100%);
+    background-attachment: fixed;
+    color: #fff;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 12px 24px;
+    overflow-x: hidden;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: clamp(1.35rem, 6vw, 2.2rem);
+    font-weight: 800;
+    line-height: 1.2;
+    background: linear-gradient(90deg, var(--accent2), var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 12px rgba(255, 46, 136, 0.35));
+  }
+
+  .subtitle {
+    margin-top: 6px;
+    font-size: clamp(0.8rem, 3.2vw, 0.95rem);
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  #board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 7px;
+    width: 100%;
+    max-width: 560px;
+    aspect-ratio: 1 / 1;
+    margin-bottom: 18px;
+  }
+
+  .cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4px 3px;
+    border-radius: 14px;
+    background: var(--cell-bg);
+    border: 1px solid var(--cell-border);
+    font-weight: 600;
+    font-size: clamp(0.55rem, 2.6vw, 0.85rem);
+    line-height: 1.15;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    word-break: break-word;
+    hyphens: auto;
+    transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    backdrop-filter: blur(4px);
+  }
+
+  .cell:active {
+    transform: scale(0.93);
+  }
+
+  .cell.marked {
+    background: linear-gradient(135deg, var(--accent) 0%, #b721ff 100%);
+    border-color: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 0 16px rgba(255, 46, 136, 0.55), inset 0 0 12px rgba(255, 255, 255, 0.15);
+    animation: pop 0.25s ease;
+  }
+
+  .cell.free {
+    background: linear-gradient(135deg, #f7971e 0%, var(--accent3) 100%);
+    color: #1a1a2e;
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 14px rgba(255, 215, 0, 0.45);
+    cursor: default;
+    font-size: clamp(0.85rem, 4vw, 1.3rem);
+  }
+
+  .cell.win {
+    animation: winPulse 0.9s ease infinite;
+  }
+
+  @keyframes pop {
+    0%   { transform: scale(0.8); }
+    60%  { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes winPulse {
+    0%, 100% { box-shadow: 0 0 12px rgba(0, 229, 255, 0.6); }
+    50%      { box-shadow: 0 0 26px rgba(0, 229, 255, 1); }
+  }
+
+  #newCardBtn {
+    font: inherit;
+    font-weight: 800;
+    font-size: 1.05rem;
+    padding: 16px 36px;
+    border: none;
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(90deg, var(--accent2) 0%, #2979ff 100%);
+    box-shadow: 0 6px 22px rgba(0, 229, 255, 0.35);
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.2s ease;
+  }
+
+  #newCardBtn:active {
+    transform: scale(0.95);
+    box-shadow: 0 3px 12px rgba(0, 229, 255, 0.25);
+  }
+
+  /* ---------- BINGO Overlay ---------- */
+
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 8, 30, 0.82);
+    backdrop-filter: blur(6px);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  #overlay.show {
+    display: flex;
+  }
+
+  #bingoText {
+    font-size: clamp(3.5rem, 18vw, 8rem);
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    background: linear-gradient(90deg, var(--accent3), var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: bingoZoom 0.6s cubic-bezier(0.18, 1.4, 0.4, 1), bingoWiggle 1.6s ease 0.6s infinite;
+    filter: drop-shadow(0 4px 24px rgba(255, 46, 136, 0.6));
+  }
+
+  #overlay .hint {
+    margin-top: 10px;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  #continueBtn {
+    margin-top: 28px;
+    font: inherit;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 14px 32px;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    border-radius: 999px;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+  }
+
+  @keyframes bingoZoom {
+    0%   { transform: scale(0); opacity: 0; }
+    70%  { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes bingoWiggle {
+    0%, 100% { transform: rotate(-2deg) scale(1); }
+    50%      { transform: rotate(2deg) scale(1.05); }
+  }
+
+  /* ---------- Konfetti ---------- */
+
+  .confetti {
+    position: fixed;
+    top: -20px;
+    z-index: 101;
+    pointer-events: none;
+    animation-name: confettiFall;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+
+  @keyframes confettiFall {
+    0% {
+      transform: translateY(0) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(110vh) rotate(720deg);
+      opacity: 0.7;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>AI Buzzword Bingo 🎯</h1>
+  <div class="subtitle">Live-Vortrag Edition – tippe auf jedes Buzzword, das fällt!</div>
+</header>
+
+<div id="board" aria-label="Bingo-Karte"></div>
+
+<button id="newCardBtn">🔀 Neue Karte</button>
+
+<div id="overlay">
+  <div id="bingoText">BINGO!</div>
+  <div class="hint">Reihe voll – Glückwunsch! 🎉</div>
+  <button id="continueBtn">Weiterspielen</button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var BUZZWORDS = [
+    "Agentic AI", "Prompt Engineering", "Halluzination", "RAG", "LLM",
+    "Vibe Coding", "Kontext-Fenster", "Fine-Tuning", "Token", "Disruption",
+    "Game Changer", "Synergie", "MCP", "Multi-Agent", "AGI", "Copilot",
+    "Deep Dive", "Skalierung", "Use Case", "ROI", "Transformation",
+    "Paradigmenwechsel", "State of the Art", "Low Hanging Fruit",
+    "Chain of Thought", "Embeddings", "Vektor-Datenbank", "Zero-Shot",
+    "Inferenz", "Alignment", "Prompt Injection", "Human in the Loop",
+    "GPU-Cluster", "Open-Source-Modell", "Superintelligenz",
+    "Datengetrieben", "Ökosystem", "10x Produktivität",
+    "KI ersetzt keine Menschen…", "Exponentielles Wachstum"
+  ];
+
+  var FREE_INDEX = 12;
+  var STORAGE_KEY = "aiBuzzwordBingo";
+
+  var boardEl = document.getElementById("board");
+  var overlayEl = document.getElementById("overlay");
+  var newCardBtn = document.getElementById("newCardBtn");
+  var continueBtn = document.getElementById("continueBtn");
+
+  var terms = [];
+  var marked = [];
+  var celebratedLines = [];
+
+  var LINES = (function () {
+    var lines = [], r, c;
+    for (r = 0; r < 5; r++) {
+      lines.push([r * 5, r * 5 + 1, r * 5 + 2, r * 5 + 3, r * 5 + 4]);
+    }
+    for (c = 0; c < 5; c++) {
+      lines.push([c, c + 5, c + 10, c + 15, c + 20]);
+    }
+    lines.push([0, 6, 12, 18, 24]);
+    lines.push([4, 8, 12, 16, 20]);
+    return lines;
+  })();
+
+  function shuffle(arr) {
+    var a = arr.slice(), i, j, t;
+    for (i = a.length - 1; i > 0; i--) {
+      j = Math.floor(Math.random() * (i + 1));
+      t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        terms: terms, marked: marked, celebratedLines: celebratedLines
+      }));
+    } catch (e) { /* privater Modus o. Ä. – Spiel läuft trotzdem */ }
+  }
+
+  function load() {
+    try {
+      var data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (data && Array.isArray(data.terms) && data.terms.length === 25 &&
+          Array.isArray(data.marked) && data.marked.length === 25) {
+        terms = data.terms;
+        marked = data.marked;
+        celebratedLines = Array.isArray(data.celebratedLines) ? data.celebratedLines : [];
+        return true;
+      }
+    } catch (e) { /* ignorieren, neue Karte */ }
+    return false;
+  }
+
+  function newCard() {
+    var words = shuffle(BUZZWORDS).slice(0, 24);
+    terms = words.slice(0, 12).concat(["FREI 🎁"], words.slice(12));
+    marked = terms.map(function (_, i) { return i === FREE_INDEX; });
+    celebratedLines = [];
+    save();
+    render();
+  }
+
+  function completedLines() {
+    var done = [];
+    LINES.forEach(function (line, idx) {
+      var full = line.every(function (i) { return marked[i]; });
+      if (full) done.push(idx);
+    });
+    return done;
+  }
+
+  function render() {
+    boardEl.innerHTML = "";
+    var winCells = {};
+    completedLines().forEach(function (lineIdx) {
+      LINES[lineIdx].forEach(function (i) { winCells[i] = true; });
+    });
+
+    terms.forEach(function (term, i) {
+      var cell = document.createElement("div");
+      cell.className = "cell";
+      cell.textContent = term;
+      cell.setAttribute("role", "button");
+      if (i === FREE_INDEX) {
+        cell.classList.add("free", "marked");
+      } else {
+        if (marked[i]) cell.classList.add("marked");
+        cell.addEventListener("click", function () { toggle(i); });
+      }
+      if (winCells[i]) cell.classList.add("win");
+      boardEl.appendChild(cell);
+    });
+  }
+
+  function toggle(i) {
+    marked[i] = !marked[i];
+
+    var done = completedLines();
+    var newLine = done.some(function (idx) {
+      return celebratedLines.indexOf(idx) === -1;
+    });
+    celebratedLines = done;
+
+    save();
+    render();
+
+    if (newLine) celebrate();
+  }
+
+  function celebrate() {
+    overlayEl.classList.add("show");
+    launchConfetti(140);
+    if (navigator.vibrate) navigator.vibrate([80, 40, 80, 40, 200]);
+  }
+
+  function closeOverlay() {
+    overlayEl.classList.remove("show");
+  }
+
+  var CONFETTI_COLORS = ["#ff2e88", "#00e5ff", "#ffd700", "#7cff5e", "#b721ff", "#ff7b00", "#ffffff"];
+
+  function launchConfetti(count) {
+    for (var k = 0; k < count; k++) {
+      var piece = document.createElement("div");
+      piece.className = "confetti";
+      var size = 6 + Math.random() * 8;
+      var round = Math.random() < 0.35;
+      piece.style.width = size + "px";
+      piece.style.height = (round ? size : size * 0.45) + "px";
+      piece.style.borderRadius = round ? "50%" : "2px";
+      piece.style.left = (Math.random() * 100) + "vw";
+      piece.style.background = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+      piece.style.animationDuration = (2.2 + Math.random() * 2.5) + "s";
+      piece.style.animationDelay = (Math.random() * 0.8) + "s";
+      document.body.appendChild(piece);
+      piece.addEventListener("animationend", function (e) {
+        e.target.remove();
+      });
+    }
+  }
+
+  newCardBtn.addEventListener("click", function () {
+    newCard();
+  });
+
+  continueBtn.addEventListener("click", closeOverlay);
+  overlayEl.addEventListener("click", function (e) {
+    if (e.target === overlayEl) closeOverlay();
+  });
+
+  if (!load()) {
+    newCard();
+  } else {
+    render();
+  }
+})();
+</script>
+
+</body>
+</html>
